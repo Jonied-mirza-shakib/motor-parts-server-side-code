@@ -5,7 +5,7 @@ const cors = require('cors')
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
+const stripe = require("stripe")('sk_test_51L4fLCD15eCVhrzNVKFUgYIoojI0kjYJjWo0WLPPJRZEPnkOjjIh8IBTVnpyrOD6XKKI7KfYZsUviISe5F0ExkZi00GNwiaj4U')
 app.use(cors())
 app.use(express.json())
 
@@ -113,6 +113,30 @@ async function run() {
             res.send(result)
         })
 
+        app.put('/bestSeller/:id', async (req, res) => {
+            const id = req.params.id;
+            const updateParts = req.body;
+            console.log('form update', updateParts)
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    name: updateParts.name,
+                    img: updateParts.img,
+                    price: updateParts.price
+                },
+            };
+            const result = await bestSellerCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        })
+
+        app.delete('/bestSeller/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await bestSellerCollection.deleteOne(query);
+            res.send(result)
+        })
+
         app.post('/blog', async (req, res) => {
             const blog = req.body;
             const result = await blogCollection.insertOne(blog)
@@ -173,7 +197,7 @@ async function run() {
         app.post('/orders', async (req, res) => {
             const order = req.body;
             console.log(order)
-            const query = { email: order.email, number: order.number, location: order.location, order: order.order };
+            const query = { email: order.email, number: order.number, name:order.name, total: order.total };
             const exist = await orderCollection.findOne(query);
             if (exist) {
                 return res.send({ success: false, order: exist })
@@ -199,7 +223,7 @@ async function run() {
         app.post("/create-payment-intent", async (req, res) => {
             const service = req.body;
             console.log(service)
-            const price = service.order;
+            const price = service.total;
             console.log(price)
             const amount = price * 100;
             const paymentIntent = await stripe.paymentIntents.create({
